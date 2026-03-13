@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Premium ASCII Guitar Tab to MIDI Converter. Effortlessly parse tabs with chords and two-digit frets.">
+    <title>🎸 Premium Tab to MIDI Converter</title>
+    <!-- Modern, premium font from Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- MidiWriterJS for robust MIDI generation instead of older jsmidgen -->
+    <script src="https://cdn.jsdelivr.net/npm/midi-writer-js@2.1.4/build/browser.min.js"></script>
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --primary-hover: #7c3aed;
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            --card-bg: rgba(30, 41, 59, 0.65);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 900px;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 1.05rem;
+            line-height: 1.5;
+        }
+
+        .subtitle em {
+            color: #cbd5e1;
+            font-size: 0.9em;
+        }
+
+        textarea {
+            width: 100%;
+            height: 240px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: #e2e8f0;
+            font-family: 'JetBrains Mono', 'Courier New', Courier, monospace;
+            font-size: 15px;
+            padding: 1.5rem;
+            box-sizing: border-box;
+            resize: vertical;
+            transition: all 0.3s ease;
+            line-height: 1.6;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        .controls {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        label {
+            font-weight: 500;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        input[type="number"], select {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        input[type="number"] {
+            width: 80px;
+        }
+
+        select {
+            cursor: pointer;
+            width: auto;
+            min-width: 160px;
+        }
+
+        input[type="number"]:focus, select:focus {
+            border-color: var(--primary);
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.875rem 2rem;
+            font-size: 1.05rem;
+            font-weight: 600;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 14px 0 rgba(139, 92, 246, 0.4);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .status {
+            margin-top: 1.5rem;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 500;
+            text-align: center;
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        .status.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+        }
+
+        .download-area {
+            margin-top: 1.5rem;
+            display: none;
+            justify-content: center;
+            animation: slideUp 0.4s ease;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 1rem 2.5rem;
+            border-radius: 9999px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.4);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5);
+        }
+        
+        svg {
+            width: 20px;
+            height: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="card">
+        <h1>🎸 Tab to MIDI Converter</h1>
+        <p class="subtitle">
+            Paste your ASCII tab below. We automatically handle chords, double-digit frets, and rests!<br>
+            <em><small>Powered by dynamic spacing detection and MidiWriterJS engine.</small></em>
+        </p>
+        
+        <textarea id="tabInput" placeholder="e|---0-------2-------3-------|&#10;B|---1-------3-------4-------|&#10;G|---0-------2-------3-------|&#10;D|---2---4-------5-------2---|&#10;A|---2---4-------5-------2---|&#10;E|---0-------2-------3-------|" spellcheck="false"></textarea>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="bpm">Tempo (BPM):</label>
+                <input type="number" id="bpm" value="120" min="40" max="300">
+            </div>
+            
+            <div class="control-group">
+                <label for="resolution">1 Char represents:</label>
+                <select id="resolution">
+                    <option value="16">16th Note (Fast)</option>
+                    <option value="8" selected>8th Note (Standard)</option>
+                    <option value="4">Quarter Note (Slow)</option>
+                </select>
+            </div>
+
+            <button onclick="convertTab()">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Generate MIDI
+            </button>
+        </div>
+        
+        <div id="status" class="status"></div>
+        <div id="downloadArea" class="download-area"></div>
+    </div>
+</div>
+
+<script>
+    // Standard Guitar Tuning (MIDI Note Numbers)
+    const STRING_TUNING = {
+        'e': 64, // High E
+        'B': 59,
+        'G': 55,
+        'D': 50,
+        'A': 45,
+        'E': 40  // Low E
+    };
+
+    function convertTab() {
+        const input = document.getElementById('tabInput').value;
+        const bpm = parseInt(document.getElementById('bpm').value) || 120;
+        const resolution = document.getElementById('resolution').value;
+        const statusDiv = document.getElementById('status');
+        const downloadArea = document.getElementById('downloadArea');
+        
+        statusDiv.className = 'status';
+        downloadArea.style.display = 'none';
+        
+        if (!input.trim()) {
+            showStatus("Please enter some tab text.", "error");
+            return;
+        }
+
+        try {
+            const result = parseAndGenerateMidi(input, bpm, resolution);
+            
+            if (!result || result.noteCount === 0) {
+                showStatus("No readable notes detected. Ensure format is like 'e|---0---|'", "error");
+                return;
+            }
+
+            showStatus(`Success! Generated sequence with ${result.noteCount} notes parsed.`, "success");
+            
+            // Create Download Button
+            downloadArea.innerHTML = `
+                <a href="${result.dataUri}" download="guitar_tab.mid" class="download-btn">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Download MIDI File
+                </a>
+            `;
+            downloadArea.style.display = 'flex';
+            
+        } catch (err) {
+            console.error(err);
+            showStatus("Error parsing tab: " + err.message, "error");
+        }
+    }
+
+    function showStatus(message, type) {
+        const statusDiv = document.getElementById('status');
+        statusDiv.textContent = message;
+        statusDiv.className = `status show ${type}`;
+    }
+
+    // Advanced Parser with Layout Detection & Timing
+    function parseAndGenerateMidi(text, bpm, resolution) {
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        
+        let stringData = [];
+        let stringPitches = [];
+        
+        // Map lines to strings based on leading character (e.g., "e|")
+        lines.forEach(line => {
+            const match = line.match(/^([eBGDAE])\|(.*)/i);
+            if (match) {
+                let key = match[1];
+                // Smart differentiation between high e and low E if both are upper/lowercase
+                if (key === 'E' && stringPitches.includes(64) === false) {
+                     key = 'e';
+                } else if (key === 'E') {
+                     key = 'E';
+                } else if (key === 'e') {
+                     key = 'e';
+                } else {
+                     if (key.toLowerCase() === 'b') key = 'B';
+                     if (key.toLowerCase() === 'g') key = 'G';
+                     if (key.toLowerCase() === 'd') key = 'D';
+                     if (key.toLowerCase() === 'a') key = 'A';
+                }
+                
+                stringPitches.push(STRING_TUNING[key]);
+                stringData.push(match[2]);
+            }
+        });
+        
+        if (stringData.length === 0) return null;
+        
+        const maxLength = Math.max(...stringData.map(s => s.length));
+        
+        // Setup MidiWriter track
+        const track = new MidiWriter.Track();
+        track.setTempo(bpm);
+        track.addEvent(new MidiWriter.ProgramChangeEvent({instrument: 25})); // Acoustic Guitar (Nylon)
+        
+        let skipNext = 0;
+        
+        // Calculate Ticks for MidiWriter (Quarter note = 128 ticks)
+        // resolution '8' = 8th note = 64 ticks
+        // resolution '16' = 16th note = 32 ticks
+        let ticksPerChar = resolution === '8' ? 64 : (resolution === '16' ? 32 : 128);
+        
+        let accumulatedWaitTicks = 0;
+        let noteCount = 0;
+        
+        // Scan column by column (time slices)
+        for (let col = 0; col < maxLength; col++) {
+            
+            // If the parser resolved a 2-digit fret, we skip the next character visually
+            if (skipNext > 0) {
+                skipNext--;
+                accumulatedWaitTicks += ticksPerChar;
+                continue;
+            }
+            
+            let chordMidiNotes = [];
+            let hasNoteThisCol = false;
+            let isTwoDigit = false;
+            
+            // Check all strings at this time slice
+            for (let row = 0; row < stringData.length; row++) {
+                let segment = stringData[row] || "";
+                let char1 = segment[col];
+                let char2 = (col + 1 < segment.length) ? segment[col+1] : '';
+                
+                if (char1 && char1 >= '0' && char1 <= '9') {
+                    hasNoteThisCol = true;
+                    let fret = parseInt(char1);
+                    
+                    // Lookahead to detect 10s, 11s, etc.
+                    if (char2 && char2 >= '0' && char2 <= '9') {
+                        isTwoDigit = true;
+                        fret = parseInt(char1 + char2);
+                    }
+                    
+                    let basePitch = stringPitches[row];
+                    chordMidiNotes.push(basePitch + fret);
+                }
+            }
+            
+            if (hasNoteThisCol) {
+                // If there's an accumulated wait time since the last note, apply it here
+                let eventConfig = {
+                    pitch: chordMidiNotes,
+                    duration: resolution // base duration of the plucks
+                };
+                
+                if (accumulatedWaitTicks > 0) {
+                    eventConfig.wait = 'T' + accumulatedWaitTicks;
+                }
+                
+                // Blast the note/chord
+                track.addEvent(new MidiWriter.NoteEvent(eventConfig));
+                noteCount += chordMidiNotes.length;
+                
+                // Reset wait time; cursor automatically moves forward by note's 'duration'
+                accumulatedWaitTicks = 0;
+                
+                if (isTwoDigit) skipNext = 1;
+            } else {
+                // It's a dash, space, or vertical bar – effectively a rest
+                accumulatedWaitTicks += ticksPerChar;
+            }
+        }
+        
+        const write = new MidiWriter.Writer(track);
+        return { 
+            dataUri: write.dataUri(), 
+            noteCount 
+        };
+    }
+</script>
+
+</body>
+</html>
