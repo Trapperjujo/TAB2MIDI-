@@ -396,7 +396,8 @@
             // If the parser resolved a 2-digit fret, we skip the next character visually
             if (skipNext > 0) {
                 skipNext--;
-                accumulatedWaitTicks += ticksPerChar;
+                // FIX: Do NOT add wait ticks for the second digit of a fret.
+                // This ensures "12" takes the same musical time as "0" in the timeline.
                 continue;
             }
             
