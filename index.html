@@ -297,58 +297,92 @@
             line-height: 1.6;
         }
 
-        .trust-badge strong {
-            color: #e2e8f0;
-        }
-
-        .news-feed {
-            display: grid;
-            gap: 1.25rem;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-        }
-
-        .news-item {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1.25rem;
-            transition: all 0.3s ease;
-            text-decoration: none;
+        .news-banner {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.9);
+            border-bottom: 1px solid var(--primary);
             color: var(--text-main);
+            padding: 0.5rem 0;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
             display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
+            align-items: center;
         }
 
-        .news-item:hover {
-            transform: translateY(-4px);
-            border-color: var(--primary);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-            background: rgba(15, 23, 42, 0.8);
-        }
-
-        .news-item-title {
+        .news-banner-label {
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 1rem;
             font-weight: 600;
-            font-size: 1.05rem;
-            line-height: 1.4;
-            color: #e2e8f0;
+            font-size: 0.85rem;
+            border-radius: 0 4px 4px 0;
+            z-index: 2;
+            position: relative;
+            white-space: nowrap;
         }
 
-        .news-item-date {
-            font-size: 0.85rem;
-            color: var(--text-muted);
+        .news-marquee {
+            display: flex;
+            white-space: nowrap;
+            overflow: hidden;
+            flex-grow: 1;
         }
-        
+
+        .news-marquee-content {
+            display: inline-block;
+            animation: marquee 30s linear infinite;
+            padding-left: 100%; /* Start off-screen right */
+        }
+
+        .news-marquee-content a {
+            color: #e2e8f0;
+            text-decoration: none;
+            margin-right: 3rem;
+            font-size: 0.95rem;
+            transition: color 0.2s ease;
+        }
+
+        .news-marquee-content a:hover {
+            color: #a78bfa;
+            text-decoration: underline;
+        }
+
+        .news-marquee-date {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+        }
+
+        @keyframes marquee {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-100%, 0); }
+        }
+
         .news-loading {
             color: var(--text-muted);
             font-style: italic;
-            text-align: center;
-            grid-column: 1 / -1;
-            padding: 2rem 0;
+            font-size: 0.9rem;
+            margin-left: 1rem;
+        }
+        
+        /* Adjust body padding so banner doesn't overlap content */
+        body {
+            padding-top: 3rem;
         }
     </style>
 </head>
 <body>
+
+<!-- Top News Banner -->
+<div class="news-banner">
+    <div class="news-banner-label">🎵 Stereogum News</div>
+    <div class="news-marquee" id="news-feed">
+        <div class="news-loading">Loading latest news...</div>
+    </div>
+</div>
 
 <div class="app-container">
     <div class="card">
@@ -399,14 +433,6 @@
         <!-- E-E-A-T Trust/Privacy Declaration -->
         <div class="trust-badge">
             <p>🔒 <strong>100% Secure & Private:</strong> This <strong>free converter</strong> processes all <strong>Guitar Tabs</strong> into <strong>MIDI Notes</strong> entirely within your web browser. No data is ever stored or uploaded to our servers.</p>
-        </div>
-    </div>
-
-    <!-- Music News Feed Card -->
-    <div class="card" style="margin-top: 2rem;">
-        <h2 style="font-size: 1.5rem; margin-top: 0; margin-bottom: 1.5rem; background: linear-gradient(to right, #a78bfa, #f472b6); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.01em;">🎵 Latest Music News (Stereogum)</h2>
-        <div id="news-feed" class="news-feed">
-            <div class="news-loading">Loading latest news...</div>
         </div>
     </div>
 </div>
@@ -667,6 +693,10 @@
                 if (items.length > 0) {
                     feedContainer.innerHTML = ''; // clear loading state
                     
+                    const marqueeContent = document.createElement('div');
+                    marqueeContent.className = 'news-marquee-content';
+                    
+                    let htmlContent = '';
                     items.forEach(item => {
                         const title = item.querySelector("title")?.textContent || "No Title";
                         const link = item.querySelector("link")?.textContent || "#";
@@ -677,19 +707,17 @@
                             dateText = new Date(pubDateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                         }
                         
-                        const articleEl = document.createElement('a');
-                        articleEl.className = 'news-item';
-                        articleEl.href = link;
-                        articleEl.target = '_blank';
-                        articleEl.rel = 'noopener noreferrer';
-                        
-                        articleEl.innerHTML = `
-                            <div class="news-item-title">${title}</div>
-                            <div class="news-item-date">${dateText}</div>
+                        htmlContent += `
+                            <a href="${link}" target="_blank" rel="noopener noreferrer">
+                                <strong>${title}</strong>
+                                <span class="news-marquee-date">${dateText}</span>
+                            </a>
                         `;
-                        
-                        feedContainer.appendChild(articleEl);
                     });
+                    
+                    // Duplicate content for smooth infinite scrolling
+                    marqueeContent.innerHTML = htmlContent + htmlContent;
+                    feedContainer.appendChild(marqueeContent);
                     return; // exit on success
                 }
             }
